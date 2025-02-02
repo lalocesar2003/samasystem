@@ -20,14 +20,20 @@ export const convertFileSize = (sizeInBytes: number, digits?: number) => {
     return sizeInMB.toFixed(digits || 1) + " MB"; // Less than 1 GB, show in MB
   } else {
     const sizeInGB = sizeInBytes / (1024 * 1024 * 1024);
-    return sizeInGB.toFixed(digits || 1) + " GB"; // 1 GB or more, show in GB
+    return sizeInGB.toFixed(digits || 2) + " GB"; // 1 GB or more, show in GB
   }
+};
+
+export const calculateAngle = (sizeInBytes: number) => {
+  const totalSizeInBytes = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+  const percentage = (sizeInBytes / totalSizeInBytes) * 360;
+  return Number(percentage.toFixed(2));
 };
 
 export const calculatePercentage = (sizeInBytes: number) => {
   const totalSizeInBytes = 2 * 1024 * 1024 * 1024; // 2GB in bytes
   const percentage = (sizeInBytes / totalSizeInBytes) * 100;
-  return Number(percentage.toFixed(2));
+  return Number(percentage.toFixed(1));
 };
 
 export const getFileType = (fileName: string) => {
@@ -110,6 +116,68 @@ export const formatDateTime = (isoString: string | null | undefined) => {
   return `${time}, ${day} ${month}`;
 };
 
+export const getFileIcon = (
+  extension: string | undefined,
+  type: FileType | string
+) => {
+  switch (extension) {
+    // Document
+    case "pdf":
+      return "/assets/icons/file-pdf.svg";
+    case "doc":
+      return "/assets/icons/file-doc.svg";
+    case "docx":
+      return "/assets/icons/file-docx.svg";
+    case "csv":
+      return "/assets/icons/file-csv.svg";
+    case "txt":
+      return "/assets/icons/file-txt.svg";
+    case "xls":
+    case "xlsx":
+      return "/assets/icons/file-document.svg";
+    // Image
+    case "svg":
+      return "/assets/icons/file-image.svg";
+    // Video
+    case "mkv":
+    case "mov":
+    case "avi":
+    case "wmv":
+    case "mp4":
+    case "flv":
+    case "webm":
+    case "m4v":
+    case "3gp":
+      return "/assets/icons/file-video.svg";
+    // Audio
+    case "mp3":
+    case "mpeg":
+    case "wav":
+    case "aac":
+    case "flac":
+    case "ogg":
+    case "wma":
+    case "m4a":
+    case "aiff":
+    case "alac":
+      return "/assets/icons/file-audio.svg";
+
+    default:
+      switch (type) {
+        case "image":
+          return "/assets/icons/file-image.svg";
+        case "document":
+          return "/assets/icons/file-document.svg";
+        case "video":
+          return "/assets/icons/file-video.svg";
+        case "audio":
+          return "/assets/icons/file-audio.svg";
+        default:
+          return "/assets/icons/file-other.svg";
+      }
+  }
+};
+
 // APPWRITE URL UTILS
 // Construct appwrite file URL - https://appwrite.io/docs/apis/rest#images
 export const constructFileUrl = (bucketFileId: string) => {
@@ -118,6 +186,43 @@ export const constructFileUrl = (bucketFileId: string) => {
 
 export const constructDownloadUrl = (bucketFileId: string) => {
   return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${bucketFileId}/download?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
+};
+
+// DASHBOARD UTILS
+export const getUsageSummary = (totalSpace: any) => {
+  return [
+    {
+      title: "Documents",
+      size: totalSpace.document.size,
+      latestDate: totalSpace.document.latestDate,
+      icon: "/assets/icons/file-document-light.svg",
+      url: "/documents",
+    },
+    {
+      title: "Images",
+      size: totalSpace.image.size,
+      latestDate: totalSpace.image.latestDate,
+      icon: "/assets/icons/file-image-light.svg",
+      url: "/images",
+    },
+    {
+      title: "Media",
+      size: totalSpace.video.size + totalSpace.audio.size,
+      latestDate:
+        totalSpace.video.latestDate > totalSpace.audio.latestDate
+          ? totalSpace.video.latestDate
+          : totalSpace.audio.latestDate,
+      icon: "/assets/icons/file-video-light.svg",
+      url: "/media",
+    },
+    {
+      title: "Others",
+      size: totalSpace.other.size,
+      latestDate: totalSpace.other.latestDate,
+      icon: "/assets/icons/file-other-light.svg",
+      url: "/others",
+    },
+  ];
 };
 
 export const getFileTypesParams = (type: string) => {

@@ -81,9 +81,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               render={({ field }) => (
                 <FormItem>
                   <div className="shad-form-item">
-                    <FormLabel className="shad-form-label">
-                      Nombre completo
-                    </FormLabel>
+                    <FormLabel className="shad-form-label">Full Name</FormLabel>
 
                     <FormControl>
                       <Input
@@ -145,8 +143,8 @@ const AuthForm = ({ type }: { type: FormType }) => {
           <div className="body-2 flex justify-center">
             <p className="text-light-100">
               {type === "sign-in"
-                ? "No tienes una cuenta?"
-                : "Ya tienes una cuenta"}
+                ? "Don't have an account?"
+                : "Already have an account?"}
             </p>
             <Link
               href={type === "sign-in" ? "/sign-up" : "/sign-in"}
