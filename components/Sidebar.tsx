@@ -63,10 +63,10 @@ const Sidebar = ({ fullName, avatar, email }: Props) => {
       </nav>
 
       <Image
-        src="/assets/images/files-2.png"
+        src="/assets/images/samalogo.png"
         alt="logo"
-        width={506}
-        height={418}
+        width={480}
+        height={400}
         className="w-full"
       />
 
