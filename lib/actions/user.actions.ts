@@ -16,6 +16,7 @@ const getUserByEmail = async (email: string) => {
     appwriteConfig.usersCollectionId,
     [Query.equal("email", [email])]
   );
+  console.log(result);
 
   return result.total > 0 ? result.documents[0] : null;
 };

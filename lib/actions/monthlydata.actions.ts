@@ -4,6 +4,7 @@ import { createAdminClient, createSessionClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { Query, ID } from "node-appwrite";
 import { parseStringify } from "@/lib/utils";
+import { getCurrentUser } from "./user.actions";
 
 /**
  * Helper para manejar errores y mantener consistencia con tu user.actions.ts
@@ -18,29 +19,38 @@ const handleError = (error: unknown, message: string) => {
  */
 export const listMonthlyData = async () => {
   try {
-    // Con sessionClient, el usuario debe estar autenticado (o con permisos de lectura).
-    // Si prefieres un acceso "administrativo", usa createAdminClient().
     const { databases } = await createSessionClient();
+
+    // Obtener el usuario autenticado
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("No authenticated user found.");
+    }
+
+    const userId = user.accountId; // ID del usuario autenticado
 
     const result = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.monthlyDataCollectionId
     );
 
-    // Mapeamos a nuestro tipo, aunque también
-    // se puede usar directamente result.documents
-    const monthlyData = result.documents.map((doc) => ({
-      id: doc.$id,
-      month: doc.month,
-      inspectionsProgrammed: doc.inspectionsProgrammed,
-      inspectionsCompleted: doc.inspectionsCompleted,
-      trainingProgrammed: doc.trainingProgrammed,
-      trainingCompleted: doc.trainingCompleted,
-    }));
+    // Filtrar datos para mostrar solo los del usuario autenticado
+    const monthlyData = result.documents
+      .filter((doc) => doc.users?.accountId === userId) // Filtrar por accountId
+      .map((doc) => ({
+        id: doc.$id,
+        month: doc.month,
+        inspectionsProgrammed: doc.inspectionsProgrammed,
+        inspectionsCompleted: doc.inspectionsCompleted,
+        trainingProgrammed: doc.trainingProgrammed,
+        trainingCompleted: doc.trainingCompleted,
+        users: doc.users,
+      }));
 
     return parseStringify(monthlyData);
   } catch (error) {
     handleError(error, "Failed to list monthly data");
+    return [];
   }
 };
 

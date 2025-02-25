@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 import { MonthlyDataChart } from "@/components/monthly-data-chart";
 import { MonthlyDataTable } from "@/components/monthly-data-table";
 import { useState } from "react";
-import { initialData2, Monthlydata } from "@/lib/types";
+import { Monthlydata } from "@/lib/types";
 import { listMonthlyData } from "@/lib/actions/monthlydata.actions";
 import { MonthlyDataParent } from "@/components/monthly-data-parent";
 
