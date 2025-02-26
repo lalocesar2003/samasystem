@@ -2,7 +2,7 @@
 
 import { createAdminClient, createSessionClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { Query, ID } from "node-appwrite";
+import { Query, ID, Models } from "node-appwrite";
 import { parseStringify } from "@/lib/utils";
 import { getCurrentUser } from "./user.actions";
 
@@ -12,6 +12,22 @@ import { getCurrentUser } from "./user.actions";
 const handleError = (error: unknown, message: string) => {
   console.log(error, message);
   throw error;
+};
+
+export const listAllUsers = async () => {
+  try {
+    const { databases } = await createAdminClient(); // Usa acceso admin
+
+    const result = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId // Asegúrate de tener la colección correcta
+    );
+
+    return parseStringify(result.documents); // Devuelve todos los usuarios
+  } catch (error) {
+    handleError(error, "Failed to list all users");
+    return [];
+  }
 };
 
 /**
@@ -71,24 +87,35 @@ export const createMonthlyData = async ({
   trainingCompleted: number;
 }) => {
   try {
+    // Obtener usuario actual
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("Usuario no autenticado");
+
     const { databases } = await createSessionClient();
 
+    // Crear documento con relación al usuario
     const newDoc = await databases.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.monthlyDataCollectionId,
-      ID.unique(), // Dejas que Appwrite genere el ID o puedes pasarle uno
+      ID.unique(),
       {
         month,
         inspectionsProgrammed,
         inspectionsCompleted,
         trainingProgrammed,
         trainingCompleted,
+        users: currentUser.$id, // Relación al usuario actual
       }
     );
 
-    return parseStringify(newDoc);
+    // Devolver datos con estructura completa
+    return parseStringify({
+      ...newDoc,
+      users: [currentUser], // Incluir todos los datos del usuario
+    });
   } catch (error) {
-    handleError(error, "Failed to create monthly data");
+    console.error("Error creating monthly data:", error);
+    throw error;
   }
 };
 
@@ -165,5 +192,24 @@ export const deleteMonthlyData = async (id: string) => {
     return parseStringify(deleted);
   } catch (error) {
     handleError(error, "Failed to delete monthly data");
+  }
+};
+export const createMonthlyData2 = async (
+  data: Omit<Models.Document, keyof Models.Document>
+) => {
+  try {
+    const { databases } = await createSessionClient(); // Cliente con sesión
+
+    const result = await databases.createDocument(
+      appwriteConfig.databaseId, // ID de la base de datos
+      appwriteConfig.monthlyDataCollectionId, // ID de la colección
+      ID.unique(), // ID único generado automáticamente
+      data // Objeto con los datos a insertar
+    );
+
+    return result;
+  } catch (error) {
+    handleError(error, "Failed to create monthly data");
+    return null;
   }
 };
