@@ -4,6 +4,7 @@ export const appwriteConfig = {
   databaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE!,
   usersCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION!,
   filesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_FILES_COLLECTION!,
+  eventsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_EVENTS_COLLECTION!,
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET!,
   monthlyDataCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_MONTHLY_DATA_COLLECTION!,

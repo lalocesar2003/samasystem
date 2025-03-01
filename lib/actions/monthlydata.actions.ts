@@ -79,21 +79,18 @@ export const createMonthlyData = async ({
   inspectionsCompleted,
   trainingProgrammed,
   trainingCompleted,
+  userId, // Usuario seleccionado
 }: {
   month: string;
   inspectionsProgrammed: number;
   inspectionsCompleted: number;
   trainingProgrammed: number;
   trainingCompleted: number;
+  userId: string; // Se recibe el usuario seleccionado
 }) => {
   try {
-    // Obtener usuario actual
-    const currentUser = await getCurrentUser();
-    if (!currentUser) throw new Error("Usuario no autenticado");
-
     const { databases } = await createSessionClient();
 
-    // Crear documento con relación al usuario
     const newDoc = await databases.createDocument(
       appwriteConfig.databaseId,
       appwriteConfig.monthlyDataCollectionId,
@@ -104,14 +101,13 @@ export const createMonthlyData = async ({
         inspectionsCompleted,
         trainingProgrammed,
         trainingCompleted,
-        users: currentUser.$id, // Relación al usuario actual
+        users: userId, // Relación con el usuario seleccionado
       }
     );
 
-    // Devolver datos con estructura completa
     return parseStringify({
       ...newDoc,
-      users: [currentUser], // Incluir todos los datos del usuario
+      users: [userId],
     });
   } catch (error) {
     console.error("Error creating monthly data:", error);

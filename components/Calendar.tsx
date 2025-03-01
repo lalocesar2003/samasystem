@@ -1,30 +1,29 @@
 "use client";
 
-import { useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const localizer = momentLocalizer(moment);
 
-export default function MyCalendar() {
-  const [date, setDate] = useState(new Date()); // Estado para manejar la fecha actual
+export default function MyCalendar({ events }: { events?: any[] }) {
+  if (!events || !Array.isArray(events)) {
+    return <p>Cargando eventos...</p>; // 🔹 Evita el error de `undefined.map`
+  }
+
+  const formattedEvents = events.map((event) => ({
+    ...event,
+    start: new Date(event.start),
+    end: new Date(event.end),
+  }));
 
   return (
     <Calendar
       localizer={localizer}
-      events={[
-        {
-          title: "Evento de prueba",
-          start: new Date(2025, 1, 21), // Recuerda que los meses en JS empiezan desde 0 (Febrero es 1)
-          end: new Date(2025, 1, 21),
-        },
-      ]}
+      events={formattedEvents}
       startAccessor="start"
       endAccessor="end"
       style={{ height: 500 }}
-      date={date}
-      onNavigate={(newDate) => setDate(newDate)} // Asegura que el calendario actualiza la fecha
     />
   );
 }

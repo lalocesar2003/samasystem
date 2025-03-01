@@ -1,38 +1,60 @@
 "use client";
-import { useState } from "react";
-import { createMonthlyData } from "@/lib/actions/monthlydata.actions";
+
+import { useState, useEffect } from "react";
+import {
+  createMonthlyData,
+  listAllUsers,
+} from "@/lib/actions/monthlydata.actions";
 
 export default function CreateMonthlyDataForm() {
   const [formData, setFormData] = useState({
     month: "",
     inspectionsProgrammed: 0,
     inspectionsCompleted: 0,
-    trainingProgrammed: 0, // Corregí el nombre a trainingProgrammed
+    trainingProgrammed: 0,
     trainingCompleted: 0,
+    selectedUser: "", // Nuevo campo para usuario seleccionado
   });
+
+  const [users, setUsers] = useState<{ $id: string; fullName: string }[]>([]);
+
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const userList = await listAllUsers();
+      setUsers(userList);
+    };
+    fetchUsers();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.selectedUser) {
+      alert("Por favor selecciona un usuario.");
+      return;
+    }
 
     try {
       const newRecord = await createMonthlyData({
         month: formData.month,
         inspectionsProgrammed: formData.inspectionsProgrammed,
         inspectionsCompleted: formData.inspectionsCompleted,
-        trainingProgrammed: formData.trainingProgrammed, // Asegurar nombres coincidentes
+        trainingProgrammed: formData.trainingProgrammed,
         trainingCompleted: formData.trainingCompleted,
+        userId: formData.selectedUser, // Enviar usuario seleccionado
       });
 
       if (newRecord) {
         alert("Registro creado exitosamente!");
-        console.log("Registro creado:", newRecord); // Ver estructura completa
+        console.log("Registro creado:", newRecord);
         setFormData({
-          // Resetear formulario
           month: "",
           inspectionsProgrammed: 0,
           inspectionsCompleted: 0,
           trainingProgrammed: 0,
           trainingCompleted: 0,
+          selectedUser: "",
         });
       }
     } catch (error) {
@@ -58,82 +80,52 @@ export default function CreateMonthlyDataForm() {
         />
       </div>
 
+      {/* ComboBox para seleccionar usuario */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Seleccionar Usuario
+        </label>
+        <select
+          value={formData.selectedUser}
+          onChange={(e) =>
+            setFormData({ ...formData, selectedUser: e.target.value })
+          }
+          className="w-full p-2 border rounded-md"
+          required
+        >
+          <option value="">-- Selecciona un usuario --</option>
+          {users.map((user) => (
+            <option key={user.$id} value={user.$id}>
+              {user.fullName}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Campos restantes */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Inspecciones Programadas
-          </label>
-          <input
-            type="number"
-            value={formData.inspectionsProgrammed}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                inspectionsProgrammed: Number(e.target.value),
-              })
-            }
-            className="w-full p-2 border rounded-md"
-            min="0"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Inspecciones Completadas
-          </label>
-          <input
-            type="number"
-            value={formData.inspectionsCompleted}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                inspectionsCompleted: Number(e.target.value),
-              })
-            }
-            className="w-full p-2 border rounded-md"
-            min="0"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Capacitaciones Programadas
-          </label>
-          <input
-            type="number"
-            value={formData.trainingProgrammed}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                trainingProgrammed: Number(e.target.value),
-              })
-            }
-            className="w-full p-2 border rounded-md"
-            min="0"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            Capacitaciones Completadas
-          </label>
-          <input
-            type="number"
-            value={formData.trainingCompleted}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                trainingCompleted: Number(e.target.value),
-              })
-            }
-            className="w-full p-2 border rounded-md"
-            min="0"
-            required
-          />
-        </div>
+        {[
+          { label: "Inspecciones Programadas", key: "inspectionsProgrammed" },
+          { label: "Inspecciones Completadas", key: "inspectionsCompleted" },
+          { label: "Capacitaciones Programadas", key: "trainingProgrammed" },
+          { label: "Capacitaciones Completadas", key: "trainingCompleted" },
+        ].map(({ label, key }) => (
+          <div key={key} className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              {label}
+            </label>
+            <input
+              type="number"
+              value={formData[key as keyof typeof formData] as number}
+              onChange={(e) =>
+                setFormData({ ...formData, [key]: Number(e.target.value) })
+              }
+              className="w-full p-2 border rounded-md"
+              min="0"
+              required
+            />
+          </div>
+        ))}
       </div>
 
       <button
