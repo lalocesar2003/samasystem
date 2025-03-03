@@ -1,12 +1,10 @@
-// app/page.js
 "use client";
 
 import Link from "next/link";
 import MyCalendar from "@/components/Calendar";
 import { Home as HomeIcon } from "lucide-react";
-import { listEvents } from "@/lib/actions/calendar.actions";
 
-export default async function HomePage() {
+export default function HomePage() {
   return (
     <div className="container mx-auto mt-5">
       <Link
