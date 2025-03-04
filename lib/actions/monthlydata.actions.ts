@@ -47,8 +47,10 @@ export const listMonthlyData = async () => {
 
     const result = await databases.listDocuments(
       appwriteConfig.databaseId,
-      appwriteConfig.monthlyDataCollectionId
+      appwriteConfig.monthlyDataCollectionId,
+      [Query.limit(200), Query.orderDesc("$createdAt")]
     );
+    console.log("datitaaaaaaaa", result.documents);
 
     // Filtrar datos para mostrar solo los del usuario autenticado
     const monthlyData = result.documents

@@ -10,13 +10,16 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { type Monthlydata } from "@/lib/types";
-import {
-  listMonthlyData,
-  updateMonthlyData,
-} from "@/lib/actions/monthlydata.actions";
+import { updateMonthlyData } from "@/lib/actions/monthlydata.actions";
 import { useEffect, useState } from "react";
 
-export function EditMonthlyDataForm(): Promise<Monthlydata[]> {
+interface MonthlyDataTableProps {
+  // Usamos "data" y la función setData
+  data: Monthlydata[];
+  setData: React.Dispatch<React.SetStateAction<Monthlydata[]>>;
+}
+
+export function EditMonthlyDataForm2() {
   const [data, setData] = useState<Monthlydata[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 4;
