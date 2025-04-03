@@ -36,38 +36,35 @@ export const listAllUsers = async () => {
 export const listMonthlyData = async () => {
   try {
     const { databases } = await createSessionClient();
-
-    // Obtener el usuario autenticado
     const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("No authenticated user found.");
-    }
+    if (!user) throw new Error("No authenticated user found.");
 
-    const userId = user.accountId; // ID del usuario autenticado
-
+    // Consulta directamente con accountid
     const result = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.monthlyDataCollectionId,
-      [Query.limit(200), Query.orderDesc("$createdAt")]
+      [
+        Query.equal("accountid", [user.accountId]),
+        Query.limit(200),
+        Query.orderDesc("$createdAt"),
+      ]
     );
-    console.log("datitaaaaaaaa", result.documents);
 
-    // Filtrar datos para mostrar solo los del usuario autenticado
-    const monthlyData = result.documents
-      .filter((doc) => doc.users?.accountId === userId) // Filtrar por accountId
-      .map((doc) => ({
-        id: doc.$id,
-        month: doc.month,
-        inspectionsProgrammed: doc.inspectionsProgrammed,
-        inspectionsCompleted: doc.inspectionsCompleted,
-        trainingProgrammed: doc.trainingProgrammed,
-        trainingCompleted: doc.trainingCompleted,
-        users: doc.users,
-      }));
+    const monthlyData = result.documents.map((doc) => ({
+      id: doc.$id,
+      month: doc.month,
+      inspectionsProgrammed: doc.inspectionsProgrammed,
+      inspectionsCompleted: doc.inspectionsCompleted,
+      trainingProgrammed: doc.trainingProgrammed,
+      trainingCompleted: doc.trainingCompleted,
+      users: doc.users, // Por si lo sigues usando
+    }));
 
-    return parseStringify(monthlyData);
+    console.log("dataalfin:?", monthlyData);
+
+    return monthlyData; // o parseStringify(monthlyData)
   } catch (error) {
-    handleError(error, "Failed to list monthly data");
+    handleError(error, "Failed to list monthly data (Opción B)");
     return [];
   }
 };
@@ -92,6 +89,17 @@ export const createMonthlyData = async ({
 }) => {
   try {
     const { databases } = await createSessionClient();
+    // Buscamos en la colección "users"
+    const userDoc = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      userId
+    );
+
+    if (!userDoc) throw new Error(`No user doc found for ${userId}`);
+
+    // Obtenemos su "accountId"
+    const accountId = userDoc.accountId as string;
 
     const newDoc = await databases.createDocument(
       appwriteConfig.databaseId,
@@ -103,7 +111,9 @@ export const createMonthlyData = async ({
         inspectionsCompleted,
         trainingProgrammed,
         trainingCompleted,
-        users: userId, // Relación con el usuario seleccionado
+        users: userId,
+        accountid: accountId,
+        // Relación con el usuario seleccionado
       }
     );
 
@@ -190,6 +200,38 @@ export const deleteMonthlyData = async (id: string) => {
     return parseStringify(deleted);
   } catch (error) {
     handleError(error, "Failed to delete monthly data");
+  }
+};
+
+export const listMonthlyDataByUserId = async (userId: string) => {
+  try {
+    const { databases } = await createAdminClient(); // O createSessionClient() si quieres validar privilegios
+    const result = await databases.listDocuments(
+      appwriteConfig.databaseId,
+      appwriteConfig.monthlyDataCollectionId,
+      [
+        // Filtramos por la relación con el usuario (campo "users")
+        Query.equal("users", [userId]),
+        Query.limit(200),
+        Query.orderDesc("$createdAt"),
+      ]
+    );
+
+    // Mapeamos para devolverlo en tu tipo "Monthlydata"
+    const monthlyData = result.documents.map((doc) => ({
+      id: doc.$id,
+      month: doc.month,
+      inspectionsProgrammed: doc.inspectionsProgrammed,
+      inspectionsCompleted: doc.inspectionsCompleted,
+      trainingProgrammed: doc.trainingProgrammed,
+      trainingCompleted: doc.trainingCompleted,
+      users: doc.users, // o doc.users si lo guardas así
+    }));
+
+    return parseStringify(monthlyData);
+  } catch (error) {
+    handleError(error, "Failed to list monthly data by user ID");
+    return [];
   }
 };
 export const createMonthlyData2 = async (

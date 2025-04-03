@@ -10,9 +10,12 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { type Monthlydata } from "@/lib/types";
-import { updateMonthlyData } from "@/lib/actions/monthlydata.actions";
+import {
+  updateMonthlyData,
+  deleteMonthlyData,
+} from "@/lib/actions/monthlydata.actions";
 import { useState } from "react";
-
+import { usePathname } from "next/navigation";
 interface MonthlyDataTableProps {
   // Usamos "data" y la función setData
   data: Monthlydata[];
@@ -20,6 +23,7 @@ interface MonthlyDataTableProps {
 }
 
 export function MonthlyDataTable({ data, setData }: MonthlyDataTableProps) {
+  const pathname = usePathname();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const ITEMS_PER_PAGE = 4;
 
@@ -82,6 +86,17 @@ export function MonthlyDataTable({ data, setData }: MonthlyDataTableProps) {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      // Llamamos a la acción "deleteMonthlyData" para eliminar en Appwrite
+      await deleteMonthlyData(id);
+      // Eliminamos el registro de nuestro state local
+      setData((prev) => prev.filter((item) => item.id !== id));
+      console.log("Registro eliminado con éxito");
+    } catch (error) {
+      console.error("Error al eliminar el documento en Appwrite:", error);
+    }
+  };
   // Para el porcentaje
   const calculatePercentage = (completed: number, programmed: number) => {
     if (programmed === 0) return 0;
@@ -188,6 +203,17 @@ export function MonthlyDataTable({ data, setData }: MonthlyDataTableProps) {
                     row.trainingProgrammed
                   )}
                   %
+                </TableCell>
+                <TableCell>
+                  {/* Sólo mostramos el botón si estamos en la ruta "/juan" */}
+                  {pathname === "/juan" && (
+                    <button
+                      onClick={() => handleDelete(row.id)}
+                      className="bg-red-600 hover:bg-red-700 text-red font-medium py-1 px-3 rounded-md transition-colors duration-200"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

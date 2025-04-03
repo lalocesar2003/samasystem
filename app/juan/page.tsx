@@ -1,4 +1,5 @@
 import CreateMonthlyDataForm from "@/components/CreateMonthlyDataForm";
+import MonthlyDataManager from "@/components/MonthlyDataManager";
 
 import { listAllUsers } from "@/lib/actions/monthlydata.actions";
 import {
@@ -73,6 +74,10 @@ const Dashboard = async () => {
       </div>
 
       <CreateMonthlyDataForm />
+      <div className="p-4">
+        <h1 className="text-xl font-bold mb-4">Administrar Monthly Data</h1>
+        <MonthlyDataManager />
+      </div>
     </>
   );
 };
