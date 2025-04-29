@@ -17,8 +17,8 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { createAccount, signInUser } from "@/lib/actions/user.actions";
-import OtpModal from "@/components/OTPModal";
+import { createAccount, signInWithEmail } from "@/lib/actions/user.actions";
+import { useRouter } from "next/navigation";
 
 type FormType = "sign-in" | "sign-up";
 
@@ -29,13 +29,16 @@ const authFormSchema = (formType: FormType) => {
       formType === "sign-up"
         ? z.string().min(2).max(50)
         : z.string().optional(),
+    password: z
+      .string()
+      .min(6, "La contraseña debe tener al menos 6 caracteres"),
   });
 };
 
 const AuthForm = ({ type }: { type: FormType }) => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [accountId, setAccountId] = useState(null);
 
   const formSchema = authFormSchema(type);
   const form = useForm<z.infer<typeof formSchema>>({
@@ -43,6 +46,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
     defaultValues: {
       fullName: "",
       email: "",
+      password: "",
     },
   });
 
@@ -51,17 +55,23 @@ const AuthForm = ({ type }: { type: FormType }) => {
     setErrorMessage("");
 
     try {
-      const user =
-        type === "sign-up"
-          ? await createAccount({
-              fullName: values.fullName || "",
-              email: values.email,
-            })
-          : await signInUser({ email: values.email });
+      if (type === "sign-up") {
+        await createAccount({
+          fullName: values.fullName ?? "",
+          email: values.email,
+          password: values.password,
+        });
+      } else {
+        await signInWithEmail({
+          email: values.email,
+          password: values.password,
+        });
+      }
 
-      setAccountId(user.accountId);
+      // ✅ la cookie y la sesión ya existen → redirigimos
+      router.replace("/");
     } catch {
-      setErrorMessage("Failed to create account. Please try again.");
+      setErrorMessage("Failed to authenticate. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +107,25 @@ const AuthForm = ({ type }: { type: FormType }) => {
               )}
             />
           )}
-
+          <FormField
+            control={form.control}
+            name="password" // <- clave
+            render={({ field }) => (
+              <FormItem>
+                <div className="shad-form-item">
+                  <FormLabel className="shad-form-label">Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      {...field}
+                    />
+                  </FormControl>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="email"
@@ -140,25 +168,28 @@ const AuthForm = ({ type }: { type: FormType }) => {
 
           {errorMessage && <p className="error-message">*{errorMessage}</p>}
 
-          <div className="body-2 flex justify-center">
-            <p className="text-light-100">
-              {type === "sign-in"
-                ? "Don't have an account?"
-                : "Already have an account?"}
-            </p>
-            <Link
-              href={type === "sign-in" ? "/sign-up" : "/sign-in"}
-              className="ml-1 font-medium text-brand"
-            >
-              {" "}
-              {type === "sign-in" ? "Sign Up" : "Sign In"}
-            </Link>
+          <div className="flex flex-col items-center text-sm mt-4 space-y-1">
+            <div className="flex">
+              <p className="text-light-100">
+                {type === "sign-in"
+                  ? "Don't have an account?"
+                  : "Already have an account?"}
+              </p>
+              <Link
+                href={type === "sign-in" ? "/sign-up" : "/sign-in"}
+                className="ml-1 font-medium text-brand hover:underline"
+              >
+                {type === "sign-in" ? "Sign Up" : "Sign In"}
+              </Link>
+            </div>
           </div>
         </form>
       </Form>
-
-      {accountId && (
-        <OtpModal email={form.getValues("email")} accountId={accountId} />
+      {/* Forgot password solo en sign-in */}
+      {type === "sign-in" && (
+        <Link href="/forgot" className="text-brand hover:underline">
+          Forgot password?
+        </Link>
       )}
     </>
   );

@@ -9,4 +9,5 @@ export const appwriteConfig = {
   monthlyDataCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_MONTHLY_DATA_COLLECTION!,
   secretKey: process.env.NEXT_APPWRITE_KEY!,
+  publicUrl: process.env.NEXT_PUBLIC_APP_URL!,
 };

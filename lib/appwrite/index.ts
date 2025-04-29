@@ -12,10 +12,10 @@ export const createSessionClient = async () => {
 
   const session = (await cookies()).get("appwrite-session");
 
-  if (!session || !session.value) throw new Error("No session");
-
-  client.setSession(session.value);
-
+  if (session?.value) {
+    client.setSession(session.value);
+  }
+  // ❌ Ya no se lanza throw
   return {
     get account() {
       return new Account(client);
