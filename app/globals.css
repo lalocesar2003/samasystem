@@ -297,7 +297,7 @@
 
   /* AuthForm */
   .auth-form {
-    @apply flex max-h-[800px] w-full max-w-[580px] flex-col justify-center space-y-6 transition-all lg:h-full lg:space-y-8 !important;
+    @apply flex max-h-[450px] w-full max-w-[580px] flex-col justify-center space-y-6 transition-all lg:h-full lg:space-y-8 !important;
   }
   .form-title {
     @apply h1 text-center text-light-100 md:text-left !important;

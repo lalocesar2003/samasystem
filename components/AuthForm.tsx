@@ -109,25 +109,6 @@ const AuthForm = ({ type }: { type: FormType }) => {
           )}
           <FormField
             control={form.control}
-            name="password" // <- clave
-            render={({ field }) => (
-              <FormItem>
-                <div className="shad-form-item">
-                  <FormLabel className="shad-form-label">Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Enter your password"
-                      {...field}
-                    />
-                  </FormControl>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
@@ -144,6 +125,25 @@ const AuthForm = ({ type }: { type: FormType }) => {
                 </div>
 
                 <FormMessage className="shad-form-message" />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password" // <- clave
+            render={({ field }) => (
+              <FormItem>
+                <div className="shad-form-item">
+                  <FormLabel className="shad-form-label">Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Enter your password"
+                      {...field}
+                    />
+                  </FormControl>
+                </div>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -187,7 +187,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
       </Form>
       {/* Forgot password solo en sign-in */}
       {type === "sign-in" && (
-        <Link href="/forgot" className="text-brand hover:underline">
+        <Link href="/forgot" className="text-brand hover:underline ">
           Forgot password?
         </Link>
       )}
