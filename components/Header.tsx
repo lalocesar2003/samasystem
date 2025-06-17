@@ -31,6 +31,18 @@ const Header = ({ userId, accountId }: HeaderProps) => {
 
         {/* Link para descargar el PDF */}
         <Link
+          href="https://drive.google.com/file/d/1eI8_a9lqbTSI1JhcSpy0wjIzBZpdUyYE/view?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition"
+        >
+          <FileText className="w-5 h-5 text-gray-500" />
+          <span className="truncate">
+            REGISTROS OBLIGATORIO DE INSPECCIONES INTERNAS
+          </span>
+        </Link>
+        {/* Link para descargar el PDF */}
+        <Link
           href="https://drive.google.com/file/d/1OJKlOc9PxgLgs0AAJAMI6VdL0elAzl-9/view?usp=sharing"
           target="_blank"
           rel="noopener noreferrer"
