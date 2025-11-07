@@ -16,9 +16,15 @@ interface Props {
   ownerId: string;
   accountId: string;
   className?: string;
+  onUploadComplete?: (uploadedFile: any) => void;
 }
 
-const FileUploader = ({ ownerId, accountId, className }: Props) => {
+const FileUploader = ({
+  ownerId,
+  accountId,
+  className,
+  onUploadComplete,
+}: Props) => {
   const path = usePathname();
   const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
@@ -50,6 +56,14 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
               setFiles((prevFiles) =>
                 prevFiles.filter((f) => f.name !== file.name)
               );
+
+              // --- 👇 AÑADE ESTE BLOQUE ---
+              // Si el componente padre (TaskModal) nos pasó la función,
+              // la llamamos con el resultado de la subida.
+              if (onUploadComplete) {
+                onUploadComplete(uploadedFile);
+              }
+              // --- ---------------------- ---
             }
           }
         );
@@ -57,7 +71,7 @@ const FileUploader = ({ ownerId, accountId, className }: Props) => {
 
       await Promise.all(uploadPromises);
     },
-    [ownerId, accountId, path]
+    [ownerId, accountId, path, onUploadComplete]
   );
 
   const { getRootProps, getInputProps } = useDropzone({ onDrop });

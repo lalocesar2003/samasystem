@@ -1,13 +1,28 @@
+// app/(app)/dashboard/page.tsx
 import { Monthlydata } from "@/lib/types";
 import { listMonthlyData } from "@/lib/actions/monthlydata.actions";
-import { DashboardTabs } from "@/components/dashboard-tabs";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import { DashboardTabs } from "../../components/dashboard-tabs";
+import { redirect } from "next/navigation";
 
 const Dashboard = async () => {
-  const data: Monthlydata[] = await listMonthlyData();
+  const [data, currentUser] = await Promise.all([
+    listMonthlyData() as Promise<Monthlydata[]>,
+    getCurrentUser(),
+  ]);
+
+  if (!currentUser) {
+    // por seguridad extra, aunque el layout ya redirige
+    redirect("/sign-in");
+  }
 
   return (
-    <div className="p-4">
-      <DashboardTabs initialData={data} />
+    <div>
+      <DashboardTabs
+        initialData={data}
+        ownerId={currentUser.$id}
+        accountId={currentUser.accountId}
+      />
     </div>
   );
 };

@@ -5,7 +5,7 @@ export const appwriteConfig = {
   usersCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION!,
   filesCollectionId: process.env.NEXT_PUBLIC_APPWRITE_FILES_COLLECTION!,
   eventsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_EVENTS_COLLECTION!,
-  taskCollectionId: process.env.NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION!,
+  taskCollectionId: process.env.NEXT_PUBLIC_APPWRITE_TASK_COLLECTION!,
   taskSubmissionsCollectionId:
     process.env.NEXT_PUBLIC_APPWRITE_TASK_SUBMISSIONS_COLLECTION!,
   bucketId: process.env.NEXT_PUBLIC_APPWRITE_BUCKET!,

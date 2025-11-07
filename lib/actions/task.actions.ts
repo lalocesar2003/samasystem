@@ -10,27 +10,33 @@ import { getCurrentUser } from "@/lib/actions/user.actions";
 
 // ==================== Tipos ====================
 
-type TaskStatus = "pending" | "completed" | "cancelled";
+type TaskStatus = "pendiente" | "completada";
+
+interface NestedUser {
+  $id: string;
+  fullName: string;
+  // puedes añadir email, avatar, etc. si los necesitas
+}
 
 export interface Task extends Models.Document {
   title: string;
   description?: string;
   status: TaskStatus;
   deadline?: string;
-  accountId: string;
-  createdBy?: string;
-  assignee?: string;
-  metadatos?: Record<string, unknown>;
-  taskSubmissions?: string[]; // relación two-way
+  accountid: string; // ✅ CORREGIDO: minúsculas
+  createdBy?: NestedUser | null; // Es un objeto, no un string
+  assignee?: NestedUser | null; // Es un objeto, no un string
+  // 'metadatos' eliminado porque no está en la DB
+  taskSubmissions?: string[];
 }
 
 export interface TaskSubmission extends Models.Document {
-  taskid: string; // rel -> tasks
-  type: "file"; // por ahora solo archivo
-  file: string; // rel -> files
-  submittedBy: string; // rel -> users
-  accountId: string;
-  submittedAt?: string;
+  taskid: string;
+  type: "file";
+  file: string;
+  submittedBy: string;
+  accountid: string; // ✅ CORREGIDO: minúsculas
+  submittedat: string; // ✅ CORREGIDO: añadido (basado en tu test)
 }
 
 // ==================== Helper errores / acceso ====================
@@ -42,7 +48,8 @@ const handleError = (error: unknown, message: string) => {
 
 const assertTaskAccess = (task: Task | null, user: any) => {
   if (!task) throw new Error("TASK_NOT_FOUND");
-  if (task.accountId !== user.accountId) throw new Error("FORBIDDEN");
+  // ✅ CORREGIDO: 'accountid' en minúsculas
+  if (task.accountid !== user.accountId) throw new Error("FORBIDDEN");
 };
 
 // ==================== READ: tareas pendientes para el panel ====================
@@ -61,8 +68,8 @@ export const getPendingTasksForCurrentUser = async ({
     if (!currentUser) throw new Error("User not found");
 
     const queries: string[] = [
-      Query.equal("accountId", [currentUser.accountId]),
-      Query.equal("status", ["pending"]),
+      Query.equal("accountid", [currentUser.accountId]), // ✅
+      Query.equal("status", ["pendiente"]), // ✅
       Query.limit(limit),
     ];
 
@@ -77,17 +84,33 @@ export const getPendingTasksForCurrentUser = async ({
       queries
     );
 
-    return parseStringify(tasks);
+    // --- ⬇️ NUEVA LÓGICA PARA "EXPANDIR" USUARIOS ⬇️ ---
+    const formattedTasks = tasks.documents.map((task) => {
+      return {
+        ...task, // Mantiene $id, title, description, status, etc.
+
+        // Transforma el objeto 'assignee' al formato que espera la Card
+        assignee: {
+          name: task.assignee?.fullName || "Sin asignar",
+        },
+
+        // Transforma el objeto 'createdBy'
+        createdBy: {
+          name: task.createdBy?.fullName || "Admin",
+        },
+      };
+    });
+
+    // Devolvemos la lista de tareas con los nombres ya resueltos
+    return parseStringify({ ...tasks, documents: formattedTasks });
+
+    // --- ⬆️ FIN DE LA NUEVA LÓGICA ⬆️ ---
   } catch (error) {
     handleError(error, "Failed to get pending tasks");
   }
 };
 
 // ==================== WRITE: submit de la tarea (modal) ====================
-// Flujo esperado del front:
-// 1) Usas tu action `uploadFile` -> te devuelve fileId (documento en 'files')
-// 2) Llamas a `submitTask({ taskId, fileId, path: "/dashboard" })` desde el modal
-// 3) El modal se cierra y recargas la UI con las tareas actualizadas
 
 export const submitTask = async ({
   taskId,
@@ -96,7 +119,7 @@ export const submitTask = async ({
 }: {
   taskId: string;
   fileId: string;
-  path?: string; // ruta a revalidar (ej: "/dashboard")
+  path?: string;
 }) => {
   const { databases } = await createAdminClient();
 
@@ -111,19 +134,18 @@ export const submitTask = async ({
       taskId
     );
 
+    // 'assertTaskAccess' ya está corregido
     assertTaskAccess(task, currentUser);
 
-    if (task.status === "cancelled") {
-      throw new Error("TASK_CANCELLED");
-    }
-
-    // Si ya está completada, simplemente devolvemos
-    if (task.status === "completed") {
+    // ✅ CORREGIDO: Lógica simplificada
+    // Si ya está completada, no hacer nada
+    if (task.status === "completada") {
       revalidatePath(path);
       return parseStringify({ ok: true, task, alreadyCompleted: true });
     }
+    // Si no está 'completada', debe estar 'pendiente', así que continuamos.
 
-    // 2) Evitar duplicados burdos: ¿ya envió algo este usuario para esta tarea?
+    // 2) Evitar duplicados (esta lógica está bien)
     const existing = await databases.listDocuments<TaskSubmission>(
       appwriteConfig.databaseId,
       appwriteConfig.taskSubmissionsCollectionId,
@@ -137,7 +159,6 @@ export const submitTask = async ({
     let submission: TaskSubmission;
 
     if (existing.total > 0) {
-      // Ya había un submission, lo reutilizamos
       submission = existing.documents[0];
     } else {
       // 3) Crear el registro en task_submissions
@@ -150,7 +171,8 @@ export const submitTask = async ({
           type: "file",
           file: fileId,
           submittedBy: currentUser.$id,
-          accountId: currentUser.accountId,
+          accountid: currentUser.accountId, // ✅ CORREGIDO: minúsculas
+          submittedat: new Date().toISOString(), // ✅ CORREGIDO: añadido
         }
       );
     }
@@ -160,14 +182,11 @@ export const submitTask = async ({
       appwriteConfig.databaseId,
       appwriteConfig.taskCollectionId,
       task.$id,
-      { status: "completed" as TaskStatus }
+      { status: "completada" as TaskStatus } // ✅ CORREGIDO: español
     );
 
-    // revalidar la ruta donde dibujas las cards
     revalidatePath(path);
 
-    // ⚠️ OJO: aquí NO devolvemos URL ni nada del archivo,
-    // la card solo necesita saber que la tarea quedó "completed".
     return parseStringify({
       ok: true,
       task: updatedTask,
@@ -180,7 +199,6 @@ export const submitTask = async ({
 
 // ==================== Extras opcionales para el dashboard ====================
 
-// Contadores rápidos para mostrar en el panel (pendientes / completadas)
 export const getTaskCounters = async () => {
   const { databases } = await createAdminClient();
 
@@ -188,18 +206,18 @@ export const getTaskCounters = async () => {
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("User not found");
 
-    const base = [Query.equal("accountId", [currentUser.accountId])];
+    const base = [Query.equal("accountid", [currentUser.accountId])]; // ✅ CORREGIDO: minúsculas
 
     const [pending, completed] = await Promise.all([
       databases.listDocuments<Task>(
         appwriteConfig.databaseId,
         appwriteConfig.taskCollectionId,
-        [...base, Query.equal("status", ["pending"]), Query.limit(1)]
+        [...base, Query.equal("status", ["pendiente"]), Query.limit(1)] // ✅ CORREGIDO: español
       ),
       databases.listDocuments<Task>(
         appwriteConfig.databaseId,
         appwriteConfig.taskCollectionId,
-        [...base, Query.equal("status", ["completed"]), Query.limit(1)]
+        [...base, Query.equal("status", ["completada"]), Query.limit(1)] // ✅ CORREGIDO: español
       ),
     ]);
 
@@ -217,8 +235,14 @@ export const listSubmissionsByTask = async (taskId: string, limit = 20) => {
   const { databases } = await createAdminClient();
 
   try {
+    // Esta función no usa 'accountid' o 'status', por lo que estaba bien.
+    // Solo validamos que el usuario pueda ver esto.
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error("User not found");
+
+    // Opcional: validar que el admin/usuario pertenece a la misma cuenta que la tarea
+    // const task = await databases.getDocument...
+    // assertTaskAccess(task, currentUser);
 
     const submissions = await databases.listDocuments<TaskSubmission>(
       appwriteConfig.databaseId,
@@ -233,5 +257,158 @@ export const listSubmissionsByTask = async (taskId: string, limit = 20) => {
     return parseStringify(submissions);
   } catch (error) {
     handleError(error, "Failed to list submissions by task");
+  }
+};
+
+// ==================== CREAR TAREA (admin) ====================
+// (Esta función ya estaba corregida)
+export const createTask = async ({
+  title,
+  description,
+  status,
+  deadline,
+  assigneeUserId,
+  path = "/dashboard",
+}: {
+  title: string;
+  description: string;
+  status: TaskStatus;
+  deadline: string;
+  assigneeUserId: string;
+  path?: string;
+}) => {
+  const { databases } = await createAdminClient();
+
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    const deadlineIso = deadline ? new Date(deadline).toISOString() : undefined;
+
+    const assigneeDoc = await databases.getDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.usersCollectionId,
+      assigneeUserId
+    );
+
+    const payload = {
+      title,
+      description,
+      status,
+      deadline: deadlineIso,
+      accountid: currentUser.accountId,
+      createdBy: currentUser.$id,
+      assignee: assigneeDoc.$id,
+    };
+
+    const newTask = await databases.createDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.taskCollectionId,
+      ID.unique(),
+      payload
+    );
+
+    revalidatePath(path);
+    return parseStringify(newTask);
+  } catch (error) {
+    console.log(error, "Failed to create task");
+    throw error;
+  }
+};
+
+// ==================== ACTUALIZAR TAREA (admin) ====================
+// ✅ NUEVA FUNCIÓN AÑADIDA
+export const updateTask = async ({
+  taskId,
+  title,
+  description,
+  status,
+  deadline,
+  assigneeUserId,
+  path = "/dashboard",
+}: {
+  taskId: string;
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  deadline?: string;
+  assigneeUserId?: string;
+  path?: string;
+}) => {
+  const { databases } = await createAdminClient();
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    // 1. Validar acceso
+    const task = await databases.getDocument<Task>(
+      appwriteConfig.databaseId,
+      appwriteConfig.taskCollectionId,
+      taskId
+    );
+    assertTaskAccess(task, currentUser);
+
+    // 2. Construir payload dinámico
+    const payloadToUpdate: Record<string, any> = {};
+    if (title) payloadToUpdate.title = title;
+    if (description) payloadToUpdate.description = description;
+    if (status) payloadToUpdate.status = status;
+    if (deadline) payloadToUpdate.deadline = new Date(deadline).toISOString();
+    if (assigneeUserId) payloadToUpdate.assignee = assigneeUserId;
+
+    if (Object.keys(payloadToUpdate).length === 0) {
+      return parseStringify(task); // No hay nada que actualizar
+    }
+
+    // 3. Actualizar
+    const updatedTask = await databases.updateDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.taskCollectionId,
+      taskId,
+      payloadToUpdate
+    );
+
+    revalidatePath(path);
+    return parseStringify(updatedTask);
+  } catch (error) {
+    handleError(error, "Failed to update task");
+  }
+};
+
+// ==================== ELIMINAR TAREA (admin) ====================
+
+export const deleteTask = async ({
+  taskId,
+  path = "/dashboard",
+}: {
+  taskId: string;
+  path?: string;
+}) => {
+  const { databases } = await createAdminClient();
+
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) throw new Error("User not found");
+
+    // 1. Validar acceso
+    const task = await databases.getDocument<Task>(
+      appwriteConfig.databaseId,
+      appwriteConfig.taskCollectionId,
+      taskId
+    );
+    // 'assertTaskAccess' ya está corregido
+    assertTaskAccess(task, currentUser);
+
+    // 2. Eliminar
+    await databases.deleteDocument(
+      appwriteConfig.databaseId,
+      appwriteConfig.taskCollectionId,
+      taskId
+    );
+
+    revalidatePath(path);
+    return parseStringify({ ok: true });
+  } catch (error) {
+    handleError(error, "Failed to delete task");
   }
 };

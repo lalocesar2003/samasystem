@@ -1,3 +1,4 @@
+import { AdminTaskManagement } from "@/components/admin-task-management";
 import CreateMonthlyDataForm from "@/components/CreateMonthlyDataForm";
 import MonthlyDataManager from "@/components/MonthlyDataManager";
 
@@ -77,6 +78,15 @@ const Dashboard = async () => {
       <div className="p-4">
         <h1 className="text-xl font-bold mb-4">Administrar Monthly Data</h1>
         <MonthlyDataManager />
+      </div>
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-2">Panel de Administración</h1>
+          <p className="text-muted-foreground">
+            Gestiona todas las tareas del sistema
+          </p>
+        </div>
+        <AdminTaskManagement />
       </div>
     </>
   );
