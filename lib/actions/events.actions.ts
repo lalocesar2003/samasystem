@@ -1,14 +1,14 @@
 "use server";
 
 import { Query, ID } from "node-appwrite";
-// Importamos solo createAdminClient
-import { createAdminClient } from "@/lib/appwrite";
+import { createAdminClient, createSessionClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { parseStringify } from "@/lib/utils";
-import { getCurrentUser } from "./user.actions";
+import { getCurrentUser } from "./user.actions"; // Asumimos que está en el mismo directorio
 import { revalidatePath } from "next/cache";
 
 // Definimos los tipos para los parámetros de las funciones
+// Esto es lo que envían tus formularios (CreateEventModal, EditEventModal)
 export interface CreateEventParams {
   title: string;
   category: string;
@@ -172,11 +172,8 @@ export const getCurrentUserEventsByMonth = async (
   month: number
 ) => {
   try {
-    //
-    // --- CAMBIO REALIZADO AQUÍ ---
-    // Usamos createAdminClient() en lugar de createSessionClient()
-    //
-    const { databases } = await createAdminClient();
+    // Usamos createSessionClient para seguridad a nivel de usuario
+    const { databases } = await createSessionClient();
     const currentUser = await getCurrentUser();
 
     if (!currentUser) throw new Error("Usuario no autenticado");
@@ -193,7 +190,6 @@ export const getCurrentUserEventsByMonth = async (
 
     // Buscamos eventos donde el 'userId' (campo del evento) coincida
     // con el '$id' del documento del usuario (de la colección 'users')
-    // Esto es igual que tu lógica en `file.actions.ts` (Query.equal("owner", ...))
     const result = await databases.listDocuments(
       appwriteConfig.databaseId,
       appwriteConfig.eventsCollectionId,

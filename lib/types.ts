@@ -41,3 +41,13 @@ export const initialData2: Monthlydata[] = [
     trainingCompleted: 5,
   },
 ];
+export interface Event {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  category: string;
+  userId: string;
+  userName: string;
+  accountId: string;
+}

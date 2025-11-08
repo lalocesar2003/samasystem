@@ -1,22 +1,34 @@
 "use client";
 
-import Link from "next/link";
-import MyCalendar from "@/components/Calendar";
-import { Home as HomeIcon } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { CalendarView } from "@/components/calendar-view";
+import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 
-export default function HomePage() {
+export default function Page() {
   return (
-    <div className="container mx-auto mt-5">
-      <Link
-        href="/"
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity mb-4"
-      >
-        <HomeIcon className="w-6 h-6" />
-        <p>Inicio</p>
-      </Link>
-
-      <h1 className="text-2xl font-bold mb-4">Calendario de Eventos</h1>
-      <MyCalendar />
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Mi Calendario
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Eventos asignados para ti
+            </p>
+          </div>
+          <Button variant="outline" asChild>
+            <a href="/admin">
+              <Settings className="w-4 h-4 mr-2" />
+              Administración
+            </a>
+          </Button>
+        </div>
+        <Card className="p-6">
+          <CalendarView role="employee" />
+        </Card>
+      </div>
     </div>
   );
 }
