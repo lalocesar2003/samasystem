@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react"; // 1. Importa useEffect
 import {
   Table,
   TableBody,
@@ -25,21 +25,10 @@ import { Trash2, Plus, Calendar, User } from "lucide-react";
 import {
   createTask as createTaskAction,
   deleteTask as deleteTaskAction,
+  getPendingTasksForCurrentUser, // 2. Importa la acción para LEER
 } from "@/lib/actions/task.actions";
 
-// Mock data - replace with real data from your backend
-const initialTasks = [
-  {
-    $id: "1",
-    title: "Diseñar interfaz de usuario",
-    description: "Crear mockups para la nueva plataforma",
-    status: "pendiente" as const,
-    deadline: "2025-01-15",
-    createdBy: { name: "Admin" },
-    assignee: { name: "Juan García" },
-  },
-];
-
+// Interfaz para la tarea (ajusta si es necesario)
 interface Task {
   $id: string;
   title: string;
@@ -47,72 +36,123 @@ interface Task {
   status: "pendiente" | "completada";
   deadline: string;
   createdBy: { name: string };
-  assignee: { name: string; id?: string }; // 🔹 opcional id
+  assignee: { name: string; id?: string };
 }
 
 export function AdminTaskManagement() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  // 3. Empieza con un array VACÍO, no con datos mock
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Estado de carga
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  // 4. Carga los datos REALES cuando el componente se monta
+  useEffect(() => {
+    const loadTasks = async () => {
+      setIsLoading(true);
+      try {
+        // Tu acción `getPendingTasksForCurrentUser` ya formatea los datos
+        // y (asumo) trae las tareas del admin.
+        // Si necesitas TODAS las tareas (no solo pendientes),
+        // debes crear una nueva 'action' como `getAllTasksForAdmin`.
+        const result = await getPendingTasksForCurrentUser({});
+
+        if (result && result.documents) {
+          setTasks(result.documents);
+        }
+      } catch (error) {
+        console.error("Error cargando tareas:", error);
+        setTasks([]); // En caso de error, muestra la tabla vacía
+      }
+      setIsLoading(false);
+    };
+
+    loadTasks();
+  }, []); // El array vacío [] asegura que se ejecuta 1 vez al montar
+
   const handleDeleteTask = (taskId: string) => {
     startTransition(async () => {
-      await deleteTaskAction({ taskId, path: "/juan" }); // ajusta path
-      setTasks((prev) => prev.filter((task) => task.$id !== taskId));
-      setTaskToDelete(null);
+      try {
+        // 5. ¡CORRIGE LA RUTA DE REVALIDACIÓN!
+        await deleteTaskAction({ taskId, path: "/juan/tareas" });
+        setTasks((prev) => prev.filter((task) => task.$id !== taskId));
+        setTaskToDelete(null);
+      } catch (error) {
+        console.error("Error al eliminar:", error);
+      }
     });
   };
+
   const handleCreateTask = (
     newTask: Omit<Task, "$id"> & { assigneeId: string }
   ) => {
     startTransition(async () => {
-      const created: any = await createTaskAction({
-        title: newTask.title,
-        description: newTask.description,
-        status: newTask.status,
-        deadline: newTask.deadline,
-        assigneeUserId: newTask.assigneeId, // 🔹 usamos el ID real
-        path: "/dashboard",
-      });
+      try {
+        const created: any = await createTaskAction({
+          title: newTask.title,
+          description: newTask.description,
+          status: newTask.status,
+          deadline: newTask.deadline,
+          assigneeUserId: newTask.assigneeId,
+          // 5. ¡CORRIGE LA RUTA DE REVALIDACIÓN!
+          path: "/juan/tareas",
+        });
 
-      if (!created) return;
+        if (!created) return;
 
-      const task: Task = {
-        $id: created.$id,
-        title: created.title,
-        description: created.description,
-        status: created.status,
-        deadline: created.deadline ?? newTask.deadline,
-        createdBy: { name: "Admin" }, // o usa createdBy.fullName después
-        assignee: {
-          id: created.assignee,
-          name: created.metadatos?.assigneeName ?? newTask.assignee.name,
-        },
-      };
+        // Formateamos la tarea para añadirla al estado local
+        // (La revalidación la cargará en el próximo refresh de otro usuario)
+        const task: Task = {
+          $id: created.$id,
+          title: created.title,
+          description: created.description,
+          status: created.status,
+          deadline: created.deadline ?? newTask.deadline,
+          // Tu 'action' de crear no devuelve 'createdBy' ni 'assignee' formateado,
+          // así que lo simulamos para la UI local.
+          createdBy: { name: "Admin" },
+          assignee: {
+            id: created.assignee,
+            name: newTask.assignee.name, // Usamos el nombre del formulario
+          },
+        };
 
-      setTasks((prev) => [...prev, task]);
-      setIsCreateDialogOpen(false);
+        setTasks((prev) => [...prev, task]);
+        setIsCreateDialogOpen(false);
+      } catch (error) {
+        console.error("Error al crear:", error);
+      }
     });
   };
 
   const statusColors = {
-    // ✅
     pendiente:
       "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    // ✅
     completada:
       "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    // Puedes dejar "cancelled" si tienes datos antiguos, pero ya no se usará
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("es-ES", {
       year: "numeric",
       month: "long",
       day: "numeric",
     });
   };
+
+  // 6. Muestra un estado de carga mientras se traen los datos
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* ... (Header) ... */}
+        <div className="border rounded-lg p-8 flex justify-center items-center h-64 bg-card">
+          <p className="text-muted-foreground">Cargando tareas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -142,6 +182,7 @@ export function AdminTaskManagement() {
       <div className="border rounded-lg overflow-hidden bg-card">
         <Table>
           <TableHeader>
+            {/* ... (Tu TableHeader no cambia) ... */}
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="font-semibold">Título</TableHead>
               <TableHead className="font-semibold">Descripción</TableHead>
@@ -227,7 +268,7 @@ export function AdminTaskManagement() {
               onClick={() => taskToDelete && handleDeleteTask(taskToDelete)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Eliminar
+              {isPending ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

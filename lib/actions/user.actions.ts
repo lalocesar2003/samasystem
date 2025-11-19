@@ -2,7 +2,7 @@
 
 import { createAdminClient, createSessionClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
-import { Query, ID } from "node-appwrite";
+import { Query, ID, AppwriteException } from "node-appwrite";
 import { parseStringify } from "@/lib/utils";
 import { cookies } from "next/headers";
 import { avatarPlaceholderUrl } from "@/constants";
@@ -213,9 +213,35 @@ export const signInWithEmail = async ({
       secure: true,
     });
 
-    return parseStringify({ sessionId: session.$id });
+    return parseStringify({
+      ok: true,
+      sessionId: session.$id,
+    });
   } catch (error) {
-    handleError(error, "Failed to sign in with email/password");
+    console.error(error, "Failed to sign in with email/password");
+
+    // Si el error viene de Appwrite
+    if (error instanceof AppwriteException) {
+      // Credenciales inválidas ⇒ 401
+      if (error.code === 401) {
+        return parseStringify({
+          ok: false,
+          error: "Correo o contraseña incorrectos.",
+        });
+      }
+
+      // Otros errores de Appwrite (por ejemplo, usuario bloqueado, etc.)
+      return parseStringify({
+        ok: false,
+        error: `Error de autenticación: ${error.message}`,
+      });
+    }
+
+    // Cualquier otra cosa rara
+    return parseStringify({
+      ok: false,
+      error: "Error inesperado al iniciar sesión. Intenta nuevamente.",
+    });
   }
 };
 export const sendResetEmail = async (email: string) => {
